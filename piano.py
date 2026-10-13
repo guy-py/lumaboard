@@ -6,13 +6,14 @@ import pygame.midi
 
 # pygame setup
 bits = 16
+running = True
 pygame.mixer.pre_init(44100, -bits, 2)
 pygame.init()
 pygame.midi.init()
 screen = pygame.display.set_mode((1000, 500))
 pygame.display.set_caption("Lumaboard")
 clock = pygame.time.Clock()
-running = True
+pygame.mixer.set_num_channels(100)
 
 def interpolate(a, b, c):
     return b+(c*(a-b))
@@ -73,13 +74,9 @@ def bar(n, s):
     return l
 
 if __name__=="__main__":
-    
-    freq = 300
-
-    s_press=True
 
     #keyboard
-    kb = [[K_BACKQUOTE, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_0, K_MINUS, K_EQUALS, K_BACKSPACE],
+    keyboard = [[K_BACKQUOTE, K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9, K_0, K_MINUS, K_EQUALS, K_BACKSPACE],
           [K_TAB, K_q, K_w, K_e, K_r, K_t, K_y, K_u, K_i, K_o, K_p, K_LEFTBRACKET, K_RIGHTBRACKET, K_BACKSLASH],
           [K_a, K_s, K_d, K_f, K_g, K_h, K_j, K_k, K_l, K_SEMICOLON, K_QUOTE, K_RETURN], 
           [K_LSHIFT, K_z, K_x, K_c, K_v, K_b, K_n, K_m, K_COMMA, K_PERIOD, K_SLASH, K_RSHIFT]]
@@ -88,27 +85,32 @@ if __name__=="__main__":
               'K_TAB', 'K_q', 'K_w', 'K_e', 'K_r', 'K_t', 'K_y', 'K_u', 'K_i', 'K_o', 'K_p', 'K_LEFTBRACKET', 'K_RIGHTBRACKET', 'K_BACKSLASH',
               'K_a', 'K_s', 'K_d', 'K_f', 'K_g', 'K_h', 'K_j', 'K_k', 'K_l', 'K_SEMICOLON', 'K_QUOTE', 'K_RETURN', 
               'K_LSHIFT', 'K_z', 'K_x', 'K_c', 'K_v', 'K_b', 'K_n', 'K_m', 'K_COMMA', 'K_PERIOD', 'K_SLASH', 'K_RSHIFT']
-    universal_length = len(key_names)
-    play_mask = [False]*universal_length
-    keys = []
-    notes = []
-    rise = [0, 1, 4, 3]
-    visual_rise = [0, 0.5, 2, 1.5]
 
-    print(notes)
-    
+    #constants
+    freq             = 300              #frequency of note 0
+    universal_length = len(key_names)   #number of keys
+    rise             = [0, 1, 4, 3]     #note rise in each row
+    visual_rise      = [0, 0.5, 2, 1.5] #note rise in each row on screen
+    edo              = 12               #number of notes per octave
+
+    #variables
+    play_mask = []   #[bool]           of length universal_length, True if note is playing via playback, False if not
+    keys      = []   #[int]            of length universal_length, shows keyboard in one array
+    notes     = []   #[int]            of length universal_length, shows note number
     sounds    = []   #[pygame.Sound]   of length universal_length
-    playing   = []   #[bool]           of length universal_length, True if note is playing, False if note is not playing
+    playing   = []   #[bool]           of length universal_length, True if note is playing, False if note if not
     times     = []   #[int]            of length universal_length, number of frames the note is playing
     channels  = []   #[pygame.Channel] of length universal_length
     recording = []   #[[int, int, int]], [[start_frame, end_frame, note_index]] list similar to midi. Tells what notes are playing from what frame to what frame
-    time      = 0    #int, frame count of the program
+    time      = 0    #frame count of the program
     rise_time = 0.01 #time for note to fade into 100% volume linearly
     mode      = 1    # recording mode. 0 = none (not implemented yet), 1 = recording, 2 = playing.
     play_time = 0    #time when playback is on (mode is set to 2)
     loop_time = 0    #the number of frame in which the playback need to reset back to frame 0 (time = play_time = 0)
+    s_press   = True #toggle bool
 
-    for i, array in enumerate(kb):
+    #setup
+    for i, array in enumerate(keyboard):
             keys += array
             notes += bar(len(array), rise[i])
             print(len(keys), len(notes))
@@ -116,28 +118,12 @@ if __name__=="__main__":
 
     for i in range(len(keys)):
         note = notes[i]
-        sounds.append(make_sound((2**(note/12))*freq))
-        #sounds.append(make_sound((2**(i/41))*freq))
+        sounds.append(make_sound((2**(note/edo))*freq))
         playing.append(False)
         channels.append(None)
         times.append(-1)
-        
 
-    '''
-    tunnel = [Channel, playing, time]
-
-    tunnels = []
-
-    for i in range(8):
-        tunnels.append([pygame.mixer.Channel(i),
-                        "",
-                        0])
-
-    '''
-
-    pygame.mixer.set_num_channels(100)
-    channels=[]
-    for i in range(100):
+    for i in range(100): #100 channels
         channels.append(pygame.mixer.Channel(i))
 
     print(f'devs: {pygame.midi.get_count()}')
@@ -277,7 +263,7 @@ if __name__=="__main__":
         screen.fill([(100, 150, 255), (150, 200, 100)][sustain])
 
         count = 0
-        for j, row in enumerate(kb):
+        for j, row in enumerate(keyboard):
             for i, cell in enumerate(row):
                 i += visual_rise[j]
                 default = [(255, 245, 235), (20, 10, 0)][notes[count]%12 in [1, 3, 6, 8, 10]]
