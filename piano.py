@@ -23,15 +23,15 @@ def tell_n_channels():
         n+=i.get_busy()
 
 def stop(i):
-    global achannels
+    global channels
     global sounds
     global playing
 
-    if achannels[i] != None:
-        achannels[i].stop()
+    if channels[i] != None:
+        channels[i].stop()
     sounds[i].stop()
 
-    achannels[i] = None
+    channels[i] = None
     sounds[i].set_volume(1)
 
     playing[i] = 0  
@@ -94,32 +94,24 @@ if __name__=="__main__":
     notes = []
     rise = [0, 1, 4, 3]
     visual_rise = [0, 0.5, 2, 1.5]
-    for i, array in enumerate(kb):
-        keys += array
-        notes += bar(len(array), rise[i])
-        print(len(keys), len(notes))
 
     print(notes)
-    keys2 = [K_RSHIFT,            K_RSHIFT,         K_RSHIFT,         K_RSHIFT,         K_RSHIFT,
-            K_LSHIFT,            K_a,         K_z,         K_s,         K_x,     K_d,          K_c,
-            K_v,        K_g,         K_b,    K_h, K_n,
-            K_m,            K_k,         K_COMMA,         K_l,         K_PERIOD,     K_SEMICOLON,          K_SLASH,
-            K_TAB,            K_1,         K_q,         K_2,         K_w,
-            K_e,            K_4,         K_r,         K_5,         K_t,     K_6, K_y,
-            K_u, K_8, K_i, K_9, K_o, K_0, K_p,
-            K_LEFTBRACKET, K_EQUALS, K_RIGHTBRACKET, K_BACKSPACE, K_BACKSLASH]
-
     
-    sounds = []
-    playing = []
-    times = []
-    achannels = []
-    recording = []
-    time = 0
-    rise_time = 0.01
-    mode = 1
-    play_time = 0
-    loop_time = 0
+    sounds    = []   #[pygame.Sound]   of length universal_length
+    playing   = []   #[bool]           of length universal_length, True if note is playing, False if note is not playing
+    times     = []   #[int]            of length universal_length, number of frames the note is playing
+    channels  = []   #[pygame.Channel] of length universal_length
+    recording = []   #[[int, int, int]], [[start_frame, end_frame, note_index]] list similar to midi. Tells what notes are playing from what frame to what frame
+    time      = 0    #int, frame count of the program
+    rise_time = 0.01 #time for note to fade into 100% volume linearly
+    mode      = 1    # recording mode. 0 = none (not implemented yet), 1 = recording, 2 = playing.
+    play_time = 0    #time when playback is on (mode is set to 2)
+    loop_time = 0    #the number of frame in which the playback need to reset back to frame 0 (time = play_time = 0)
+
+    for i, array in enumerate(kb):
+            keys += array
+            notes += bar(len(array), rise[i])
+            print(len(keys), len(notes))
 
 
     for i in range(len(keys)):
@@ -127,7 +119,7 @@ if __name__=="__main__":
         sounds.append(make_sound((2**(note/12))*freq))
         #sounds.append(make_sound((2**(i/41))*freq))
         playing.append(False)
-        achannels.append(None)
+        channels.append(None)
         times.append(-1)
         
 
@@ -220,7 +212,7 @@ if __name__=="__main__":
                         if not channel.get_busy():
 
                             channel.play(sounds[i], loops=-1)
-                            achannels[i] = channel
+                            channels[i] = channel
                             playing[i] = 1
                             times[i] = 0
 
